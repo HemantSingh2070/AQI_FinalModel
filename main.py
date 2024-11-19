@@ -8,7 +8,7 @@ st.title("Air Quality Prediction App")
 
 
 cities = [
-    "Agra", "Ahmedabad", "Aizawl", "Ajmer", "Akola", "Alwar", "Amaravati", "Ambala",
+    "Agartala", "Agra", "Ahmedabad", "Aizawl", "Ajmer", "Akola", "Alwar", "Amaravati", "Ambala",
     "Amravati", "Amritsar", "Anantapur", "Angul", "Ankleshwar", "Araria", "Ariyalur", "Arrah",
     "Asansol", "Aurangabad", "Aurangabad (Bihar)", "Baddi", "Badlapur", "Bagalkot", "Baghpat",
     "Bahadurgarh", "Balasore", "Ballabgarh", "Banswara", "Baran", "Barbil", "Bareilly", "Baripada",
@@ -46,7 +46,7 @@ cities = [
 
 city = st.selectbox("Select a City", cities)
 
-file_path = f"City_CSVs/{city}.csv"
+file_path = f"City_CSVS/{city}.csv"
 try:
     air_quality_data = pd.read_csv(file_path)
     st.write(f"Data for {city} loaded successfully.")
