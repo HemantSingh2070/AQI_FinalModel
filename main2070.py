@@ -67,16 +67,6 @@ if st.checkbox("Show Data Overview"):
     st.write("Data Information:")
     st.text(air_quality_data.info())
 
-# Data Cleaning
-st.write("Handling missing values...")
-air_quality_data = air_quality_data.replace(to_replace=-200, value=np.nan)
-air_quality_data.fillna(air_quality_data.mean(), inplace=True)
-
-# Display Updated Missing Values
-if st.checkbox("Show Missing Values Summary"):
-    st.write("Missing values after cleaning:")
-    st.write(air_quality_data.isnull().sum())
-
 # Date Processing
 st.write("Processing dates...")
 air_quality_data['Date'] = pd.to_datetime(air_quality_data['Date'], errors='coerce', dayfirst=True)
