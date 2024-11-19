@@ -4,10 +4,15 @@ import numpy as np
 from prophet import Prophet
 import matplotlib.pyplot as plt
 
+# Title and Description
 st.title("Air Quality Prediction App")
+st.markdown("""
+This app predicts air quality for selected cities and pollutants using historical data and 
+[Prophet](https://facebook.github.io/prophet/).
+""")
 
 cities = [
-   "Agartala", "Agra", "Ahmedabad", "Aizawl", "Ajmer", "Akola", "Alwar", "Amaravati", "Ambala",
+    "Agartala", "Agra", "Ahmedabad", "Aizawl", "Ajmer", "Akola", "Alwar", "Amaravati", "Ambala",
     "Amravati", "Amritsar", "Anantapur", "Angul", "Ankleshwar", "Araria", "Ariyalur", "Arrah",
     "Asansol", "Aurangabad", "Aurangabad (Bihar)", "Baddi", "Badlapur", "Bagalkot", "Baghpat",
     "Bahadurgarh", "Balasore", "Ballabgarh", "Banswara", "Baran", "Barbil", "Bareilly", "Baripada",
@@ -43,16 +48,18 @@ cities = [
     "Vrindavan", "Yadgir", "Yamunanagar"
 ]
 
+# User Input: City Selection
 city = st.selectbox("Select a City", cities)
 
-file_path = f"City_CSVs/{city}.csv"
+# Load Data Based on Selected City
+file_path = f"City_CSVS/{city}.csv"  # Adjust folder path as needed
 try:
     air_quality_data = pd.read_csv(file_path)
     st.write(f"Data for {city} loaded successfully.")
     st.dataframe(air_quality_data)
 except FileNotFoundError:
     st.error(f"No data file found for {city}. Please check the file path.")
-
+# Display Data Overview
 if st.checkbox("Show Data Overview"):
     st.write("Head of the data:")
     st.dataframe(air_quality_data.head())
@@ -60,17 +67,17 @@ if st.checkbox("Show Data Overview"):
     st.write("Data Information:")
     st.text(air_quality_data.info())
 
+# Data Cleaning
 st.write("Handling missing values...")
 air_quality_data = air_quality_data.replace(to_replace=-200, value=np.nan)
+air_quality_data.fillna(air_quality_data.mean(), inplace=True)
 
-# Fix for missing values handling: only fill numeric columns
-numeric_columns = air_quality_data.select_dtypes(include=['number']).columns
-air_quality_data[numeric_columns] = air_quality_data[numeric_columns].fillna(air_quality_data[numeric_columns].mean())
-
+# Display Updated Missing Values
 if st.checkbox("Show Missing Values Summary"):
     st.write("Missing values after cleaning:")
     st.write(air_quality_data.isnull().sum())
 
+# Date Processing
 st.write("Processing dates...")
 air_quality_data['Date'] = pd.to_datetime(air_quality_data['Date'], errors='coerce', dayfirst=True)
 air_quality_data['time'] = "00:00:00"
@@ -78,32 +85,38 @@ air_quality_data['ds'] = air_quality_data['Date'].astype(str) + " " + air_qualit
 data = pd.DataFrame()
 data['ds'] = pd.to_datetime(air_quality_data['ds'])
 
-pollutants = air_quality_data.columns[1:]
+# User Input: Pollutant Selection
+pollutants = air_quality_data.columns[1:]  # Assuming first column is Date
 y = st.selectbox("Select a Pollutant", pollutants)
 
+# Prepare Data for Prophet
 data['y'] = air_quality_data[y]
 
-freq = st.selectbox("Select Prediction Frequency", ["D (Daily)", "W (Weekly)", "M (Monthly)"], index=2)
+# User Input: Frequency Selection
+freq = st.selectbox(
+    "Select Prediction Frequency",
+    ["D (Daily)", "W (Weekly)", "M (Monthly)"],
+    index=2  # Default to "M (Monthly)"
+)
 
+# Extract frequency code (e.g., "D", "W", "M")
 freq_code = freq.split(" ")[0]
 
+# Prophet Model
 st.write("Building the Prophet model...")
-try:
-    model = Prophet()
-    model.fit(data)
-except Exception as e:
-    st.error(f"Error fitting the model: {e}")
+model = Prophet()
+model.fit(data)
 
+# Forecast Future
 st.write("Generating future predictions...")
-try:
-    future = model.make_future_dataframe(periods=30, freq=freq_code)
-    forecast = model.predict(future)
-except Exception as e:
-    st.error(f"Error generating predictions: {e}")
+future = model.make_future_dataframe(periods=30, freq=freq_code)
+forecast = model.predict(future)
 
+# Forecast Results
 if st.checkbox("Show Forecast Data"):
     st.write(forecast.tail())
 
+# Visualizations
 st.write("Generating plots...")
 st.write("Forecast Plot:")
 forecast_fig = model.plot(forecast)
