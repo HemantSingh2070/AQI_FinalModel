@@ -46,7 +46,7 @@ cities = [
 
 city = st.selectbox("Select a City", cities)
 
-file_path = f"City_CSVs/{city}.csv"
+file_path = f"{city}.csv"
 try:
     air_quality_data = pd.read_csv(file_path)
     st.write(f"Data for {city} loaded successfully.")
