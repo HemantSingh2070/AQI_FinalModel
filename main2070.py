@@ -4,13 +4,10 @@ import numpy as np
 from prophet import Prophet
 import matplotlib.pyplot as plt
 
-# Title and Description
+# Application Title
 st.title("Air Quality Prediction App")
-st.markdown("""
-This app predicts air quality for selected cities and pollutants using historical data and 
-[Prophet](https://facebook.github.io/prophet/).
-""")
 
+# List of cities for selection
 cities = [
     "Agartala", "Agra", "Ahmedabad", "Aizawl", "Ajmer", "Akola", "Alwar", "Amaravati", "Ambala",
     "Amravati", "Amritsar", "Anantapur", "Angul", "Ankleshwar", "Araria", "Ariyalur", "Arrah",
@@ -45,73 +42,101 @@ cities = [
     "Srinagar", "Suakati", "Surat", "Talcher", "Tensa", "Thane", "Thiruvananthapuram", "Thoothukudi", "Thrissur",
     "Tiruchirappalli", "Tirupati", "Tirupur", "Tonk", "Tumakuru", "Tumidih", "Udaipur", "Udupi", "Ujjain",
     "Ulhasnagar", "Vapi", "Varanasi", "Vatva", "Vellore", "Vijayapura", "Vijayawada", "Visakhapatnam",
-    "Vrindavan", "Yadgir", "Yamunanagar"
-]
+    "Vrindavan", "Yadgir", "Yamunanagar"]
 
-# User Input: City Selection
+# Select a city from the dropdown
 city = st.selectbox("Select a City", cities)
 
-# Load Data Based on Selected City
-file_path = f"{city}.csv"  # Adjust folder path as needed
+# Construct the file path dynamically
+file_path = f"{city}.csv"
+
+# Load city-specific air quality data
 try:
     air_quality_data = pd.read_csv(file_path)
-    st.write(f"Data for {city} loaded successfully.")
+    st.success(f"Data for {city} loaded successfully.")
     st.dataframe(air_quality_data)
 except FileNotFoundError:
-    st.error(f"No data file found for {city}. Please check the file path.")
-# Display Data Overview
+    st.error(f"No data file found for {city}. Please ensure the file path is correct.")
+    st.stop()  # Stop execution if file is not found
+
+# Show basic data overview
 if st.checkbox("Show Data Overview"):
-    st.write("Head of the data:")
+    st.write("Data Preview:")
     st.dataframe(air_quality_data.head())
-    st.write("Shape of the data:", air_quality_data.shape)
+    st.write(f"Shape of the Data: {air_quality_data.shape}")
     st.write("Data Information:")
     st.text(air_quality_data.info())
 
-# Date Processing
-st.write("Processing dates...")
-air_quality_data['Date'] = pd.to_datetime(air_quality_data['Date'], errors='coerce', dayfirst=True)
-air_quality_data['time'] = "00:00:00"
-air_quality_data['ds'] = air_quality_data['Date'].astype(str) + " " + air_quality_data['time']
-data = pd.DataFrame()
-data['ds'] = pd.to_datetime(air_quality_data['ds'])
+# Handle missing values
+st.write("Cleaning missing values...")
+air_quality_data.replace(to_replace=-200, value=np.nan, inplace=True)
+air_quality_data.fillna(air_quality_data.mean(), inplace=True)
 
-# User Input: Pollutant Selection
-pollutants = air_quality_data.columns[1:]  # Assuming first column is Date
-y = st.selectbox("Select a Pollutant", pollutants)
+# Summary of missing values
+if st.checkbox("Show Missing Values Summary"):
+    st.write("Missing values after cleaning:")
+    st.write(air_quality_data.isnull().sum())
 
-# Prepare Data for Prophet
+# Process dates for Prophet model
+st.write("Processing date columns...")
+try:
+    air_quality_data['Date'] = pd.to_datetime(air_quality_data['Date'], errors='coerce', dayfirst=True)
+    air_quality_data['time'] = "00:00:00"
+    air_quality_data['ds'] = air_quality_data['Date'].astype(str) + " " + air_quality_data['time']
+    data = pd.DataFrame()
+    data['ds'] = pd.to_datetime(air_quality_data['ds'])
+except KeyError:
+    st.error("Date column is missing or incorrectly formatted in the dataset.")
+    st.stop()
+
+# Select pollutant for prediction
+pollutants = list(air_quality_data.columns[1:])  # Exclude date column
+if not pollutants:
+    st.error("No pollutants found in the dataset.")
+    st.stop()
+
+y = st.selectbox("Select a Pollutant for Prediction", pollutants)
+
+# Prepare data for Prophet
 data['y'] = air_quality_data[y]
 
-# User Input: Frequency Selection
-freq = st.selectbox(
-    "Select Prediction Frequency",
-    ["D (Daily)", "W (Weekly)", "M (Monthly)"],
-    index=2  # Default to "M (Monthly)"
-)
+# Select prediction frequency
+freq = st.selectbox("Select Prediction Frequency", ["D (Daily)", "W (Weekly)", "M (Monthly)"], index=2)
+freq_code = freq.split(" ")[0]  # Extract frequency code
 
-# Extract frequency code (e.g., "D", "W", "M")
-freq_code = freq.split(" ")[0]
-
-# Prophet Model
+# Train the Prophet model
 st.write("Building the Prophet model...")
-model = Prophet()
-model.fit(data)
+try:
+    model = Prophet()
+    model.fit(data)
+except Exception as e:
+    st.error(f"Error training the model: {e}")
+    st.stop()
 
-# Forecast Future
+# Generate future predictions
 st.write("Generating future predictions...")
 future = model.make_future_dataframe(periods=30, freq=freq_code)
 forecast = model.predict(future)
 
-# Forecast Results
+# Display forecast data
 if st.checkbox("Show Forecast Data"):
     st.write(forecast.tail())
 
-# Visualizations
-st.write("Generating plots...")
-st.write("Forecast Plot:")
-forecast_fig = model.plot(forecast)
-st.pyplot(forecast_fig)
+# Generate and display plots
+st.write("Generating Plots...")
 
-st.write("Components Plot:")
-components_fig = model.plot_components(forecast)
-st.pyplot(components_fig)
+# Forecast Plot
+try:
+    st.write("Forecast Plot:")
+    forecast_fig = model.plot(forecast)
+    st.pyplot(forecast_fig)
+except Exception as e:
+    st.error(f"Error generating forecast plot: {e}")
+
+# Components Plot
+try:
+    st.write("Components Plot:")
+    components_fig = model.plot_components(forecast)
+    st.pyplot(components_fig)
+except Exception as e:
+    st.error(f"Error generating components plot: {e}")
